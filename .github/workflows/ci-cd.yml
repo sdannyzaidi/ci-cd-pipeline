@@ -1,0 +1,80 @@
+name: Node.js CI/CD Pipeline
+
+# Trigger the workflow on push or pull request to main branch
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # Job 1: Test and Lint
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Step 1: Checkout code from repository
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Step 2: Set up Node.js environment
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    # Step 3: Install dependencies
+    - name: Install dependencies
+      run: npm ci
+    
+    # Step 4: Run linting
+    - name: Run ESLint
+      run: npm run lint
+    
+    # Step 5: Run tests
+    - name: Run tests
+      run: npm test
+    
+    # Step 6: Run tests with coverage
+    - name: Generate test coverage
+      run: npm run test:coverage
+
+  # Job 2: Build and Push Docker Image (only on push to main/master)
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: test  # This job runs only if 'test' job succeeds
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'  # Only run on push, not on PR
+    
+    steps:
+    # Step 1: Checkout code
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Step 2: Log in to Docker Hub
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    # Step 3: Extract metadata for Docker
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ secrets.DOCKER_USERNAME }}/nodejs-cicd-app
+        tags: |
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    # Step 4: Build and push Docker image
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
