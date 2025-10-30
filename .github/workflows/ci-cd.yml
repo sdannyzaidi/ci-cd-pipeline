@@ -78,3 +78,23 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+
+  # Job 3: Deploy to AWS EC2 (COMMENTED - Uncomment when EC2 is ready)
+  # deploy:
+  #   name: Deploy to AWS EC2
+  #   needs: build-and-push  # This job runs only if 'build-and-push' job succeeds
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #   # Step 1: Deploy to EC2 via SSH
+  #   - name: Deploy to EC2
+  #     uses: appleboy/ssh-action@master
+  #     with:
+  #       host: ${{ secrets.EC2_HOST }}
+  #       username: ${{ secrets.EC2_USER }}
+  #       key: ${{ secrets.EC2_SSH_KEY }}
+  #       script: |
+  #         docker pull ${{ secrets.DOCKER_USERNAME }}/nodejs-cicd-app:latest
+  #         docker stop nodejs-app || true
+  #         docker rm nodejs-app || true
+  #         docker run -d -p 80:3000 --name nodejs-app --restart unless-stopped ${{ secrets.DOCKER_USERNAME }}/nodejs-cicd-app:latest
